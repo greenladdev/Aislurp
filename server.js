@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const RssParser = require('rss-parser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -33,6 +34,8 @@ async function safeFetch(url, options = {}) {
     clearTimeout(timeout);
   }
 }
+
+const rssParser = new RssParser({ timeout: 8000 });
 
 // ── Sources ───────────────────────────────────────────────────────────────────
 
@@ -159,18 +162,100 @@ async function fetchReddit(subreddit) {
     });
 }
 
+async function fetchLobsters() {
+  // Lobsters AI + ML tags, sorted by hotness
+  const [ai, ml] = await Promise.allSettled([
+    safeFetch('https://lobste.rs/t/ai.json'),
+    safeFetch('https://lobste.rs/t/ml.json'),
+  ]);
+
+  const seen = new Set();
+  const items = [];
+
+  for (const r of [ai, ml]) {
+    if (r.status !== 'fulfilled') continue;
+    for (const story of r.value) {
+      if (seen.has(story.short_id) || !story.title) continue;
+      seen.add(story.short_id);
+
+      items.push({
+        id: `lobsters-${story.short_id}`,
+        title: story.title,
+        url: story.url || `https://lobste.rs/s/${story.short_id}`,
+        description: story.description
+          ? story.description.replace(/<[^>]+>/g, '').slice(0, 220).trimEnd() + '…'
+          : `${story.score} points · ${story.comment_count} comments on Lobsters`,
+        date: story.created_at,
+        source: 'Lobsters',
+        sourceColor: '#ac130d',
+        score: hnScore(story.score ?? 0, story.created_at),
+        engagement: story.score ?? 0,
+      });
+    }
+  }
+
+  return items;
+}
+
+async function fetchArxiv() {
+  const feeds = [
+    'https://export.arxiv.org/rss/cs.AI',
+    'https://export.arxiv.org/rss/cs.LG',
+  ];
+
+  const results = await Promise.allSettled(feeds.map(url => rssParser.parseURL(url)));
+
+  const seen = new Set();
+  const items = [];
+
+  for (const r of results) {
+    if (r.status !== 'fulfilled') continue;
+    for (const item of r.value.items ?? []) {
+      const id = item.link || item.guid;
+      if (!id || seen.has(id) || !item.title) continue;
+      seen.add(id);
+
+      // arXiv titles sometimes have line breaks
+      const title = item.title.replace(/\n/g, ' ').trim();
+      // Strip HTML from description and truncate
+      const rawDesc = (item.contentSnippet || item.summary || '').replace(/\n/g, ' ').trim();
+      const description = rawDesc.length > 220 ? rawDesc.slice(0, 220).trimEnd() + '…' : rawDesc;
+
+      items.push({
+        id: `arxiv-${id}`,
+        title,
+        url: item.link,
+        description,
+        date: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
+        source: 'arXiv',
+        sourceColor: '#b31b1b',
+        // arXiv items don't have engagement scores; weight by recency only
+        score: hnScore(5, item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()),
+        engagement: 0,
+      });
+    }
+  }
+
+  return items;
+}
+
 // ── API endpoint ──────────────────────────────────────────────────────────────
 
 app.get('/api/articles', async (req, res) => {
   try {
-    const [hn, devto, ml, llama, artificial, vibecoding] = await Promise.allSettled([
-      fetchHackerNews(),
-      fetchDevTo(),
-      fetchReddit('MachineLearning'),
-      fetchReddit('LocalLLaMA'),
-      fetchReddit('artificial'),
-      fetchReddit('vibecoding'),
-    ]);
+    const [hn, devto, ml, llama, artificial, vibecoding, singularity, chatgpt, lobsters, arxiv] =
+      await Promise.allSettled([
+        fetchHackerNews(),
+        fetchDevTo(),
+        fetchReddit('MachineLearning'),
+        fetchReddit('LocalLLaMA'),
+        fetchReddit('artificial'),
+        fetchReddit('vibecoding'),
+        fetchReddit('singularity'),
+        fetchReddit('ChatGPT'),
+        fetchLobsters(),
+        fetchArxiv(),
+      ]);
 
     const all = [
       ...(hn.status === 'fulfilled' ? hn.value : []),
@@ -179,6 +264,10 @@ app.get('/api/articles', async (req, res) => {
       ...(llama.status === 'fulfilled' ? llama.value : []),
       ...(artificial.status === 'fulfilled' ? artificial.value : []),
       ...(vibecoding.status === 'fulfilled' ? vibecoding.value : []),
+      ...(singularity.status === 'fulfilled' ? singularity.value : []),
+      ...(chatgpt.status === 'fulfilled' ? chatgpt.value : []),
+      ...(lobsters.status === 'fulfilled' ? lobsters.value : []),
+      ...(arxiv.status === 'fulfilled' ? arxiv.value : []),
     ];
 
     // Deduplicate by URL

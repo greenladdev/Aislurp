@@ -16,11 +16,15 @@ const searchInput = document.getElementById('search');
 
 /* ── Source badge styling ────────────────────────────────────────────────────── */
 const SOURCE_STYLES = {
-  'Hacker News':       { bg: 'rgba(255,102,0,0.12)', color: '#ff8533', border: 'rgba(255,102,0,0.3)' },
+  'Hacker News':       { bg: 'rgba(255,102,0,0.12)',  color: '#ff8533', border: 'rgba(255,102,0,0.3)'  },
   'Dev.to':            { bg: 'rgba(14,165,233,0.12)', color: '#38bdf8', border: 'rgba(14,165,233,0.3)' },
-  'r/MachineLearning': { bg: 'rgba(255,69,0,0.12)',  color: '#ff6b35', border: 'rgba(255,69,0,0.3)'  },
-  'r/LocalLLaMA':      { bg: 'rgba(255,69,0,0.12)',  color: '#ff6b35', border: 'rgba(255,69,0,0.3)'  },
-  'r/artificial':      { bg: 'rgba(255,69,0,0.12)',  color: '#ff6b35', border: 'rgba(255,69,0,0.3)'  },
+  'Lobsters':          { bg: 'rgba(172,19,13,0.12)',  color: '#f87171', border: 'rgba(172,19,13,0.35)' },
+  'arXiv':             { bg: 'rgba(179,27,27,0.12)',  color: '#fca5a5', border: 'rgba(179,27,27,0.35)' },
+  'r/MachineLearning': { bg: 'rgba(255,69,0,0.12)',   color: '#ff6b35', border: 'rgba(255,69,0,0.3)'   },
+  'r/LocalLLaMA':      { bg: 'rgba(255,69,0,0.12)',   color: '#ff6b35', border: 'rgba(255,69,0,0.3)'   },
+  'r/artificial':      { bg: 'rgba(255,69,0,0.12)',   color: '#ff6b35', border: 'rgba(255,69,0,0.3)'   },
+  'r/singularity':     { bg: 'rgba(99,102,241,0.12)', color: '#818cf8', border: 'rgba(99,102,241,0.3)' },
+  'r/ChatGPT':         { bg: 'rgba(16,163,127,0.12)', color: '#34d399', border: 'rgba(16,163,127,0.3)' },
   'r/vibecoding':      { bg: 'rgba(124,58,237,0.12)', color: '#a78bfa', border: 'rgba(124,58,237,0.3)' },
 };
 
