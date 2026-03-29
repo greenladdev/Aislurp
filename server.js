@@ -281,13 +281,13 @@ app.get('/api/articles', async (req, res) => {
 
     unique.sort((a, b) => b.score - a.score);
 
-    const top30 = unique.slice(0, 30).map(a => ({
+    const top50 = unique.slice(0, 50).map(a => ({
       ...a,
       timeAgo: timeAgo(a.date),
       score: undefined, // don't expose raw score
     }));
 
-    res.json({ articles: top30, fetchedAt: new Date().toISOString() });
+    res.json({ articles: top50, fetchedAt: new Date().toISOString() });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch articles' });

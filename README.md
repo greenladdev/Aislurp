@@ -1,6 +1,6 @@
 # Aislurp
 
-AI content discovery app. Surfaces the top 30 trending articles on AI software, AI engineering, vibe coding, and LLMs from across the web — ranked by a time-decay engagement score.
+AI content discovery app. Surfaces the top 50 trending articles on AI software, AI engineering, vibe coding, and LLMs from across the web — ranked by a time-decay engagement score.
 
 **Sources:** Hacker News · Dev.to · Lobsters · arXiv · r/MachineLearning · r/LocalLLaMA · r/singularity · r/ChatGPT · r/artificial · r/vibecoding
 
