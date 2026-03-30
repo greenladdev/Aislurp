@@ -239,11 +239,66 @@ async function fetchArxiv() {
   return items;
 }
 
+async function fetchRssFeeds() {
+  const feeds = [
+    { url: 'https://openai.com/news/rss.xml',                               source: 'OpenAI',            color: '#10a37f' },
+    { url: 'https://deepmind.google/blog/rss.xml',                          source: 'Google DeepMind',   color: '#4285f4' },
+    { url: 'https://research.google/blog/rss/',                             source: 'Google Research',   color: '#34a853' },
+    { url: 'https://huggingface.co/blog/feed.xml',                          source: 'Hugging Face',      color: '#ff9d00' },
+    { url: 'https://blogs.nvidia.com/feed/',                                source: 'NVIDIA',            color: '#76b900' },
+    { url: 'https://news.mit.edu/topic/mitartificial-intelligence2-rss.xml',source: 'MIT News AI',       color: '#8b0000' },
+    { url: 'https://techcrunch.com/category/artificial-intelligence/feed/', source: 'TechCrunch AI',     color: '#0a8a00' },
+    { url: 'https://venturebeat.com/category/ai/feed/',                     source: 'VentureBeat AI',    color: '#e31b23' },
+    { url: 'https://the-decoder.com/feed/',                                 source: 'The Decoder',       color: '#6366f1' },
+    { url: 'https://pytorch.org/feed.xml',                                  source: 'PyTorch',           color: '#ee4c2c' },
+    { url: 'https://developer.nvidia.com/blog/feed',                        source: 'NVIDIA Dev',        color: '#76b900' },
+    { url: 'https://machinelearning.apple.com/rss.xml',                     source: 'Apple ML',          color: '#555555' },
+    { url: 'https://www.microsoft.com/en-us/ai/blog/feed/',                 source: 'Microsoft AI',      color: '#0078d4' },
+    { url: 'https://qwenlm.github.io/blog/index.xml',                       source: 'QwenLM',            color: '#7c3aed' },
+    { url: 'https://www.deeplearning.ai/the-batch/feed/',                   source: 'The Batch',         color: '#e94560' },
+  ];
+
+  const results = await Promise.allSettled(feeds.map(f => rssParser.parseURL(f.url)));
+
+  const seen = new Set();
+  const items = [];
+
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    if (r.status !== 'fulfilled') continue;
+    const { source, color } = feeds[i];
+
+    for (const item of r.value.items ?? []) {
+      const id = item.link || item.guid;
+      if (!id || seen.has(id) || !item.title) continue;
+      seen.add(id);
+
+      const rawDesc = (item.contentSnippet || item.summary || '').replace(/\n/g, ' ').trim();
+      const description = rawDesc.length > 220 ? rawDesc.slice(0, 220).trimEnd() + '…' : rawDesc;
+      const date = item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString();
+
+      items.push({
+        id: `rss-${source}-${id}`,
+        title: item.title.replace(/\n/g, ' ').trim(),
+        url: item.link,
+        description,
+        date,
+        source,
+        sourceColor: color,
+        score: hnScore(5, date),
+        engagement: 0,
+      });
+    }
+  }
+
+  return items;
+}
+
 // ── API endpoint ──────────────────────────────────────────────────────────────
 
 app.get('/api/articles', async (req, res) => {
   try {
-    const [hn, devto, ml, llama, artificial, vibecoding, singularity, chatgpt, lobsters, arxiv] =
+    const [hn, devto, ml, llama, artificial, vibecoding, singularity, chatgpt, lobsters, arxiv, rss] =
       await Promise.allSettled([
         fetchHackerNews(),
         fetchDevTo(),
@@ -255,6 +310,7 @@ app.get('/api/articles', async (req, res) => {
         fetchReddit('ChatGPT'),
         fetchLobsters(),
         fetchArxiv(),
+        fetchRssFeeds(),
       ]);
 
     const all = [
@@ -268,6 +324,7 @@ app.get('/api/articles', async (req, res) => {
       ...(chatgpt.status === 'fulfilled' ? chatgpt.value : []),
       ...(lobsters.status === 'fulfilled' ? lobsters.value : []),
       ...(arxiv.status === 'fulfilled' ? arxiv.value : []),
+      ...(rss.status === 'fulfilled' ? rss.value : []),
     ];
 
     // Deduplicate by URL
@@ -281,7 +338,7 @@ app.get('/api/articles', async (req, res) => {
 
     unique.sort((a, b) => b.score - a.score);
 
-    const top50 = unique.slice(0, 50).map(a => ({
+    const top50 = unique.slice(0, 60).map(a => ({
       ...a,
       timeAgo: timeAgo(a.date),
       score: undefined, // don't expose raw score
