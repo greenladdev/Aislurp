@@ -229,8 +229,7 @@ async function fetchArxiv() {
         date: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
         source: 'arXiv',
         sourceColor: '#b31b1b',
-        // arXiv items don't have engagement scores; weight by recency only
-        score: hnScore(5, item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()),
+        score: hnScore(40, item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()),
         engagement: 0,
       });
     }
@@ -285,7 +284,7 @@ async function fetchRssFeeds() {
         date,
         source,
         sourceColor: color,
-        score: hnScore(5, date),
+        score: hnScore(40, date),
         engagement: 0,
       });
     }
