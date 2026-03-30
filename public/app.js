@@ -93,6 +93,24 @@ function applyFilters() {
   statusText.textContent = `Showing ${filtered.length} of ${allArticles.length} articles`;
 }
 
+/* ── Source filters ──────────────────────────────────────────────────────────── */
+function buildSourceFilters() {
+  const container = document.getElementById('source-filters');
+  const sources = [...new Set(allArticles.map(a => a.source))].sort();
+
+  // Remove all buttons except "All"
+  container.querySelectorAll('.filter-btn:not([data-source="all"])').forEach(b => b.remove());
+
+  for (const source of sources) {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn';
+    btn.dataset.source = source;
+    btn.textContent = source;
+    if (source === activeSource) btn.classList.add('active');
+    container.appendChild(btn);
+  }
+}
+
 /* ── Fetch ───────────────────────────────────────────────────────────────────── */
 function showSkeletons() {
   grid.innerHTML = Array(6).fill('<div class="skeleton-card"></div>').join('');
@@ -121,6 +139,7 @@ async function loadArticles() {
     const time = new Date(data.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     fetchedAt.textContent = `Last updated ${time}`;
 
+    buildSourceFilters();
     applyFilters();
   } catch (err) {
     grid.innerHTML = '';
