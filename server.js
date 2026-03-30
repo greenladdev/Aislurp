@@ -312,7 +312,7 @@ app.get('/api/articles', async (req, res) => {
         fetchRssFeeds(),
       ]);
 
-    const all = [
+    const community = [
       ...(hn.status === 'fulfilled' ? hn.value : []),
       ...(devto.status === 'fulfilled' ? devto.value : []),
       ...(ml.status === 'fulfilled' ? ml.value : []),
@@ -322,25 +322,43 @@ app.get('/api/articles', async (req, res) => {
       ...(singularity.status === 'fulfilled' ? singularity.value : []),
       ...(chatgpt.status === 'fulfilled' ? chatgpt.value : []),
       ...(lobsters.status === 'fulfilled' ? lobsters.value : []),
+    ];
+    const editorial = [
       ...(arxiv.status === 'fulfilled' ? arxiv.value : []),
       ...(rss.status === 'fulfilled' ? rss.value : []),
     ];
 
-    // Deduplicate by URL
+    function dedupe(arr) {
+      const seen = new Set();
+      return arr.filter(a => {
+        const key = a.url.replace(/[?#].*$/, '').replace(/\/$/, '');
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    community.sort((a, b) => b.score - a.score);
+    editorial.sort((a, b) => b.score - a.score);
+
+    // Reserve 20 slots for editorial/RSS so they always surface
+    const topCommunity = dedupe(community).slice(0, 40);
+    const topEditorial = dedupe(editorial).slice(0, 20);
+
+    // Final merge: dedupe across both pools, then sort by score
     const seenUrls = new Set();
-    const unique = all.filter(a => {
+    const merged = [...topCommunity, ...topEditorial].filter(a => {
       const key = a.url.replace(/[?#].*$/, '').replace(/\/$/, '');
       if (seenUrls.has(key)) return false;
       seenUrls.add(key);
       return true;
     });
+    merged.sort((a, b) => b.score - a.score);
 
-    unique.sort((a, b) => b.score - a.score);
-
-    const top50 = unique.slice(0, 60).map(a => ({
+    const top50 = merged.map(a => ({
       ...a,
       timeAgo: timeAgo(a.date),
-      score: undefined, // don't expose raw score
+      score: undefined,
     }));
 
     res.json({ articles: top50, fetchedAt: new Date().toISOString() });
