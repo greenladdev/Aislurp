@@ -189,12 +189,10 @@ app.get('/api/articles', async (req, res) => {
       fetchRssFeed('https://techcrunch.com/category/artificial-intelligence/feed/',     'TechCrunch AI',     '#0a8a00'),
       fetchRssFeed('https://venturebeat.com/category/ai/feed/',                         'VentureBeat AI',    '#e31b23'),
       fetchRssFeed('https://the-decoder.com/feed/',                                     'The Decoder',       '#6366f1'),
-      fetchRssFeed('https://pytorch.org/feed.xml',                                      'PyTorch',           '#ee4c2c'),
       fetchRssFeed('https://developer.nvidia.com/blog/feed',                            'NVIDIA Dev',        '#76b900'),
       fetchRssFeed('https://machinelearning.apple.com/rss.xml',                         'Apple ML',          '#555555'),
       fetchRssFeed('https://www.microsoft.com/en-us/ai/blog/feed/',                     'Microsoft AI',      '#0078d4'),
       fetchRssFeed('https://qwenlm.github.io/blog/index.xml',                           'QwenLM',            '#7c3aed'),
-      fetchRssFeed('https://www.deeplearning.ai/the-batch/feed/',                       'The Batch',         '#e94560'),
     ]);
 
     // Flatten all results
