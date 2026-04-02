@@ -13,6 +13,7 @@ const errorMsg    = document.getElementById('error-msg');
 const refreshBtn  = document.getElementById('refresh-btn');
 const refreshIcon = document.getElementById('refresh-icon');
 const searchInput = document.getElementById('search');
+const { getSafeArticleUrl } = window.ArticleUtils;
 
 /* ── Source badge styling ────────────────────────────────────────────────────── */
 const SOURCE_STYLES = {
@@ -34,40 +35,79 @@ function badgeStyle(source) {
 }
 
 /* ── Render ──────────────────────────────────────────────────────────────────── */
-function escapeHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+function createArticleLink(url, className, label) {
+  const link = document.createElement('a');
+  link.className = className;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  if (label) link.textContent = label;
+
+  if (!url) {
+    link.href = '#';
+    link.setAttribute('aria-disabled', 'true');
+    link.addEventListener('click', event => event.preventDefault());
+    return link;
+  }
+
+  link.href = url;
+
+  return link;
 }
 
 function renderCard(article) {
-  const title = escapeHtml(article.title);
-  const desc  = escapeHtml(article.description || '');
-  const url   = escapeHtml(article.url);
-  const style = badgeStyle(article.source);
+  const safeUrl = getSafeArticleUrl(article.url);
+  const card = document.createElement('article');
+  card.className = 'card';
 
-  return `
-    <article class="card">
-      <div class="card-meta">
-        <span class="source-badge" style="${style}">${escapeHtml(article.source)}</span>
-        <span class="card-time">${escapeHtml(article.timeAgo)}</span>
-      </div>
-      <h2 class="card-title">
-        <a href="${url}" target="_blank" rel="noopener noreferrer">${title}</a>
-      </h2>
-      ${desc ? `<p class="card-desc">${desc}</p>` : ''}
-      <div class="card-footer">
-        <a class="read-link" href="${url}" target="_blank" rel="noopener noreferrer">
-          Read article
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Zm6.5-.75a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0V6.56l-5.97 5.97a.75.75 0 0 1-1.06-1.06l5.97-5.97h-3.69a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd"/>
-          </svg>
-        </a>
-      </div>
-    </article>
-  `;
+  const meta = document.createElement('div');
+  meta.className = 'card-meta';
+
+  const sourceBadge = document.createElement('span');
+  sourceBadge.className = 'source-badge';
+  sourceBadge.style.cssText = badgeStyle(article.source);
+  sourceBadge.textContent = article.source;
+
+  const cardTime = document.createElement('span');
+  cardTime.className = 'card-time';
+  cardTime.textContent = article.timeAgo;
+
+  meta.append(sourceBadge, cardTime);
+
+  const title = document.createElement('h2');
+  title.className = 'card-title';
+
+  const titleLink = createArticleLink(safeUrl, '', article.title);
+  title.appendChild(titleLink);
+
+  const footer = document.createElement('div');
+  footer.className = 'card-footer';
+
+  const readLink = createArticleLink(safeUrl, 'read-link', 'Read article');
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  icon.setAttribute('viewBox', '0 0 20 20');
+  icon.setAttribute('fill', 'currentColor');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('fill-rule', 'evenodd');
+  path.setAttribute('d', 'M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Zm6.5-.75a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0V6.56l-5.97 5.97a.75.75 0 0 1-1.06-1.06l5.97-5.97h-3.69a.75.75 0 0 1-.75-.75Z');
+  path.setAttribute('clip-rule', 'evenodd');
+  icon.appendChild(path);
+  readLink.appendChild(document.createTextNode(' '));
+  readLink.appendChild(icon);
+
+  footer.appendChild(readLink);
+
+  card.append(meta, title);
+
+  if (article.description) {
+    const desc = document.createElement('p');
+    desc.className = 'card-desc';
+    desc.textContent = article.description;
+    card.appendChild(desc);
+  }
+
+  card.appendChild(footer);
+  return card;
 }
 
 function applyFilters() {
@@ -85,7 +125,11 @@ function applyFilters() {
     );
   }
 
-  grid.innerHTML = filtered.length ? filtered.map(renderCard).join('') : '';
+  if (filtered.length) {
+    grid.replaceChildren(...filtered.map(renderCard));
+  } else {
+    grid.replaceChildren();
+  }
 
   emptyState.hidden = filtered.length > 0 || allArticles.length === 0;
   errorState.hidden = true;

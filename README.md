@@ -25,6 +25,9 @@ npm run dev
 
 # Or start normally
 npm start
+
+# Run unit tests
+npm test
 ```
 
 The app runs at `http://localhost:3000` by default. Set the `PORT` environment variable to use a different port.
