@@ -275,8 +275,9 @@ async function fetchYouTubeChannel(channelId, channelName) {
 
   for (const item of feed.items ?? []) {
     if (!item.title || !item.link) continue;
-    const date = item.pubDate ? new Date(item.pubDate).toISOString() : null;
-    if (!date || new Date(date).getTime() < cutoff) continue;
+    const rawDate = item.isoDate || item.pubDate;
+    const date = rawDate ? new Date(rawDate).toISOString() : null;
+    if (date && new Date(date).getTime() < cutoff) continue;
 
     const mg = item.mediaGroup ?? {};
     const thumbEntry = mg['media:thumbnail']?.[0];
