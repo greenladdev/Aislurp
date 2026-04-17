@@ -116,7 +116,9 @@ async function buildArticlesResponse() {
 
   const seen = new Set();
   const unique = all.filter(a => {
-    const key = a.url.replace(/[?#].*$/, '').replace(/\/$/, '');
+    const key = a.url.includes('youtube.com/watch')
+      ? a.url
+      : a.url.replace(/[?#].*$/, '').replace(/\/$/, '');
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
