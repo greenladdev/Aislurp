@@ -392,6 +392,41 @@ body {
 
 .error-state p { color: var(--text-2); }
 
+/* ── Videos Section ─────────────────────────────────────────────────────────── */
+.videos-section {
+  margin-top: 56px;
+  padding-top: 36px;
+  border-top: 1px solid var(--border);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.section-title svg {
+  width: 22px;
+  height: 22px;
+  color: #f87171;
+  flex-shrink: 0;
+}
+
+.video-status {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
 /* ── Footer ─────────────────────────────────────────────────────────────────── */
 .footer {
   border-top: 1px solid var(--border);

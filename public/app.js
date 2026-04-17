@@ -1,18 +1,23 @@
 /* ── State ───────────────────────────────────────────────────────────────────── */
 let allArticles = [];
+let allVideos   = [];
 let activeSource = 'all';
+let activeVideoChannel = 'all';
 let searchQuery = '';
 
 /* ── DOM refs ────────────────────────────────────────────────────────────────── */
-const grid        = document.getElementById('article-grid');
-const statusText  = document.getElementById('status-text');
-const fetchedAt   = document.getElementById('fetched-at');
-const emptyState  = document.getElementById('empty-state');
-const errorState  = document.getElementById('error-state');
-const errorMsg    = document.getElementById('error-msg');
-const refreshBtn  = document.getElementById('refresh-btn');
-const refreshIcon = document.getElementById('refresh-icon');
-const searchInput = document.getElementById('search');
+const grid             = document.getElementById('article-grid');
+const statusText       = document.getElementById('status-text');
+const fetchedAt        = document.getElementById('fetched-at');
+const emptyState       = document.getElementById('empty-state');
+const errorState       = document.getElementById('error-state');
+const errorMsg         = document.getElementById('error-msg');
+const refreshBtn       = document.getElementById('refresh-btn');
+const refreshIcon      = document.getElementById('refresh-icon');
+const searchInput      = document.getElementById('search');
+const videoGrid        = document.getElementById('video-grid');
+const videoEmptyState  = document.getElementById('video-empty-state');
+const videoStatusText  = document.getElementById('video-status-text');
 const { getSafeArticleUrl } = window.ArticleUtils;
 
 /* ── Source badge styling ────────────────────────────────────────────────────── */
@@ -178,9 +183,47 @@ function buildSourceFilters() {
   }
 }
 
+/* ── Video filters ───────────────────────────────────────────────────────────── */
+function buildVideoChannelFilters() {
+  const container = document.getElementById('video-channel-filters');
+  const channels = [...new Set(allVideos.map(v => v.source))].sort();
+
+  container.querySelectorAll('.filter-btn:not([data-source="all"])').forEach(b => b.remove());
+
+  for (const channel of channels) {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn';
+    btn.dataset.source = channel;
+    btn.textContent = channel;
+    if (channel === activeVideoChannel) btn.classList.add('active');
+    container.appendChild(btn);
+  }
+}
+
+function applyVideoFilters() {
+  let filtered = allVideos;
+
+  if (activeVideoChannel !== 'all') {
+    filtered = filtered.filter(v => v.source === activeVideoChannel);
+  }
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(v =>
+      v.title.toLowerCase().includes(q) ||
+      (v.description || '').toLowerCase().includes(q),
+    );
+  }
+
+  videoGrid.replaceChildren(...filtered.map(renderCard));
+  videoEmptyState.hidden = filtered.length > 0 || allVideos.length === 0;
+  videoStatusText.textContent = `${filtered.length} of ${allVideos.length} videos`;
+}
+
 /* ── Fetch ───────────────────────────────────────────────────────────────────── */
 function showSkeletons() {
   grid.innerHTML = Array(6).fill('<div class="skeleton-card"></div>').join('');
+  videoGrid.innerHTML = Array(3).fill('<div class="skeleton-card"></div>').join('');
   emptyState.hidden = true;
   errorState.hidden = true;
 }
@@ -201,13 +244,17 @@ async function loadArticles() {
     if (!res.ok) throw new Error(`Server error ${res.status}`);
     const data = await res.json();
 
-    allArticles = data.articles ?? [];
+    const allItems = data.articles ?? [];
+    allArticles = allItems.filter(a => a.mediaType !== 'video');
+    allVideos   = allItems.filter(a => a.mediaType === 'video');
 
     const time = new Date(data.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     fetchedAt.textContent = `Last updated ${time}`;
 
     buildSourceFilters();
     applyFilters();
+    buildVideoChannelFilters();
+    applyVideoFilters();
   } catch (err) {
     grid.innerHTML = '';
     emptyState.hidden = true;
@@ -227,10 +274,20 @@ document.getElementById('source-filters').addEventListener('click', e => {
   const btn = e.target.closest('.filter-btn');
   if (!btn) return;
 
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#source-filters .filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   activeSource = btn.dataset.source;
   applyFilters();
+});
+
+document.getElementById('video-channel-filters').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+
+  document.querySelectorAll('#video-channel-filters .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeVideoChannel = btn.dataset.source;
+  applyVideoFilters();
 });
 
 let searchTimer;
@@ -239,6 +296,7 @@ searchInput.addEventListener('input', e => {
   searchTimer = setTimeout(() => {
     searchQuery = e.target.value.trim();
     applyFilters();
+    applyVideoFilters();
   }, 200);
 });
 
