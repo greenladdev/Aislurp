@@ -32,18 +32,13 @@ const SOURCE_STYLES = {
   'r/singularity':     { bg: 'rgba(99,102,241,0.12)', color: '#818cf8', border: 'rgba(99,102,241,0.3)' },
   'r/ChatGPT':         { bg: 'rgba(16,163,127,0.12)', color: '#34d399', border: 'rgba(16,163,127,0.3)' },
   'r/vibecoding':      { bg: 'rgba(124,58,237,0.12)', color: '#a78bfa', border: 'rgba(124,58,237,0.3)' },
-  'Two Minute Papers': { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
-  'Fireship':          { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
-  'Yannic Kilcher':    { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
-  'ThePrimeagen':      { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
-  'Matt Wolfe':        { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
-  'Traversy Media':    { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
-  'Theo – t3.gg':      { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
-  'Lex Fridman':       { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
 };
 
-function badgeStyle(source) {
-  const s = SOURCE_STYLES[source] ?? { bg: 'rgba(148,163,184,0.1)', color: '#94a3b8', border: 'rgba(148,163,184,0.2)' };
+function badgeStyle(article) {
+  if (article.mediaType === 'video') {
+    return 'background:rgba(255,0,0,0.12);color:#f87171;border-color:rgba(255,0,0,0.35)';
+  }
+  const s = SOURCE_STYLES[article.source] ?? { bg: 'rgba(148,163,184,0.1)', color: '#94a3b8', border: 'rgba(148,163,184,0.2)' };
   return `background:${s.bg};color:${s.color};border-color:${s.border}`;
 }
 
@@ -77,7 +72,7 @@ function renderCard(article) {
 
   const sourceBadge = document.createElement('span');
   sourceBadge.className = 'source-badge';
-  sourceBadge.style.cssText = badgeStyle(article.source);
+  sourceBadge.style.cssText = badgeStyle(article);
   sourceBadge.textContent = article.source;
 
   const cardTime = document.createElement('span');

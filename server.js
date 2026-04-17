@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const path = require('path');
@@ -53,19 +54,8 @@ const rssParser = new RssParser({
   customFields: { item: [['media:group', 'mediaGroup']] },
 });
 const LIMIT = 5;
-const YOUTUBE_LIMIT = 5;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-
-const YOUTUBE_CHANNELS = [
-  { id: 'UCbfYPyITQ-7l4upoX8nvctg', name: 'Two Minute Papers' },
-  { id: 'UCsBjURrPoezykLs9EqgamOA', name: 'Fireship'          },
-  { id: 'UCZHmQk67mSJgfCCTn7xBfew', name: 'Yannic Kilcher'    },
-  { id: 'UC8ENHE5xdFSwx71u3fDH5Xw', name: 'ThePrimeagen'      },
-  { id: 'UChpleBmo18P08aKCIgti38g', name: 'Matt Wolfe'        },
-  { id: 'UC29ju8bIPH5as8OGnQzwJyA', name: 'Traversy Media'    },
-  { id: 'UCbRP3c757lWg9M-U7TyEkXA', name: 'Theo – t3.gg'     },
-  { id: 'UCSHZKyawb77ixDdsGog4iWA', name: 'Lex Fridman'       },
-];
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 const articleCache = {
   value: null,
   expiresAt: 0,
@@ -119,7 +109,7 @@ async function buildArticlesResponse() {
     fetchRssFeed('https://machinelearning.apple.com/rss.xml',                         'Apple ML',          '#555555'),
     fetchRssFeed('https://www.microsoft.com/en-us/ai/blog/feed/',                     'Microsoft AI',      '#0078d4'),
     fetchRssFeed('https://qwenlm.github.io/blog/index.xml',                           'QwenLM',            '#7c3aed'),
-    ...YOUTUBE_CHANNELS.map(ch => fetchYouTubeChannel(ch.id, ch.name)),
+    fetchYouTubeVideos(),
   ]);
 
   const all = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
@@ -267,38 +257,55 @@ async function fetchLobsters() {
   return items;
 }
 
-async function fetchYouTubeChannel(channelId, channelName) {
-  const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-  const feed = await rssParser.parseURL(url);
-  const cutoff = Date.now() - THIRTY_DAYS_MS;
-  const items = [];
-
-  for (const item of feed.items ?? []) {
-    if (!item.title || !item.link) continue;
-    const rawDate = item.isoDate || item.pubDate;
-    const date = rawDate ? new Date(rawDate).toISOString() : null;
-    if (date && new Date(date).getTime() < cutoff) continue;
-
-    const mg = item.mediaGroup ?? {};
-    const thumbEntry = mg['media:thumbnail']?.[0];
-    const thumbnail = (thumbEntry?.$?.url || thumbEntry?.url) ?? null;
-    const rawDesc = (mg['media:description']?.[0] || item.contentSnippet || '')
-      .replace(/\n/g, ' ').trim();
-
-    items.push({
-      id: `yt-${channelId}-${item.id || item.link}`,
-      title: item.title.replace(/\n/g, ' ').trim(),
-      url: item.link,
-      description: rawDesc.length > 220 ? rawDesc.slice(0, 220).trimEnd() + '…' : rawDesc,
-      thumbnail,
-      date,
-      source: channelName,
-      sourceColor: '#ff0000',
-      mediaType: 'video',
+async function fetchYouTubeSearch(query) {
+  if (!YOUTUBE_API_KEY) return [];
+  const publishedAfter = new Date(Date.now() - THIRTY_DAYS_MS).toISOString();
+  const params = new URLSearchParams({
+    part: 'snippet',
+    q: query,
+    type: 'video',
+    order: 'date',
+    publishedAfter,
+    maxResults: '25',
+    key: YOUTUBE_API_KEY,
+  });
+  const data = await safeFetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
+  return (data.items ?? [])
+    .filter(item => item.id?.videoId && item.snippet)
+    .map(item => {
+      const s = item.snippet;
+      const rawDesc = (s.description || '').replace(/\n/g, ' ').trim();
+      return {
+        id: `yt-${item.id.videoId}`,
+        title: s.title,
+        url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+        description: rawDesc.length > 220 ? rawDesc.slice(0, 220).trimEnd() + '…' : rawDesc,
+        thumbnail: s.thumbnails?.medium?.url || s.thumbnails?.default?.url || null,
+        date: s.publishedAt,
+        source: s.channelTitle,
+        sourceColor: '#ff0000',
+        mediaType: 'video',
+      };
     });
-    if (items.length === YOUTUBE_LIMIT) break;
-  }
+}
 
+async function fetchYouTubeVideos() {
+  const [ai, se] = await Promise.allSettled([
+    fetchYouTubeSearch('artificial intelligence machine learning LLM'),
+    fetchYouTubeSearch('software engineering programming coding'),
+  ]);
+
+  const seen = new Set();
+  const items = [];
+  for (const result of [ai, se]) {
+    if (result.status !== 'fulfilled') continue;
+    for (const item of result.value) {
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      items.push(item);
+    }
+  }
+  items.sort((a, b) => new Date(b.date) - new Date(a.date));
   return items;
 }
 
