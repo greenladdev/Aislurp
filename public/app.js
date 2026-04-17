@@ -3,6 +3,7 @@ let allArticles = [];
 let allVideos   = [];
 let activeSource = 'all';
 let activeVideoChannel = 'all';
+let activeTab = 'articles';
 let searchQuery = '';
 
 /* ── DOM refs ────────────────────────────────────────────────────────────────── */
@@ -18,6 +19,10 @@ const searchInput      = document.getElementById('search');
 const videoGrid        = document.getElementById('video-grid');
 const videoEmptyState  = document.getElementById('video-empty-state');
 const videoStatusText  = document.getElementById('video-status-text');
+const articlesView     = document.getElementById('articles-view');
+const videosView       = document.getElementById('videos-view');
+const articleFiltersWrap = document.getElementById('article-filters-wrap');
+const videoFiltersWrap   = document.getElementById('video-filters-wrap');
 const { getSafeArticleUrl } = window.ArticleUtils;
 
 /* ── Source badge styling ────────────────────────────────────────────────────── */
@@ -178,6 +183,26 @@ function buildSourceFilters() {
   }
 }
 
+/* ── Tab switching ───────────────────────────────────────────────────────────── */
+function switchTab(tab) {
+  activeTab = tab;
+  const isArticles = tab === 'articles';
+
+  articlesView.hidden     = !isArticles;
+  videosView.hidden       =  isArticles;
+  articleFiltersWrap.hidden =  !isArticles;
+  videoFiltersWrap.hidden   =  isArticles;
+
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+}
+
+document.querySelector('.tab-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if (btn && btn.dataset.tab !== activeTab) switchTab(btn.dataset.tab);
+});
+
 /* ── Video filters ───────────────────────────────────────────────────────────── */
 function buildVideoChannelFilters() {
   const container = document.getElementById('video-channel-filters');
@@ -290,8 +315,8 @@ searchInput.addEventListener('input', e => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
     searchQuery = e.target.value.trim();
-    applyFilters();
-    applyVideoFilters();
+    if (activeTab === 'articles') applyFilters();
+    else applyVideoFilters();
   }, 200);
 });
 
