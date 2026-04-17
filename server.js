@@ -19,7 +19,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc: ["'self'", 'data:'],
+      imgSrc: ["'self'", 'data:', 'https://i.ytimg.com', 'https://img.youtube.com'],
       connectSrc: ["'self'"],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
@@ -48,8 +48,24 @@ async function safeFetch(url, options = {}) {
   }
 }
 
-const rssParser = new RssParser({ timeout: 8000 });
+const rssParser = new RssParser({
+  timeout: 8000,
+  customFields: { item: [['media:group', 'mediaGroup']] },
+});
 const LIMIT = 5;
+const YOUTUBE_LIMIT = 5;
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+const YOUTUBE_CHANNELS = [
+  { id: 'UCbfYPyITQ-7l4upoX8nvctg', name: 'Two Minute Papers' },
+  { id: 'UCsBjURrPoezykLs9EqgamOA', name: 'Fireship'          },
+  { id: 'UCZHmQk67mSJgfCCTn7xBfew', name: 'Yannic Kilcher'    },
+  { id: 'UC8ENHE5xdFSwx71u3fDH5Xw', name: 'ThePrimeagen'      },
+  { id: 'UChpleBmo18P08aKCIgti38g', name: 'Matt Wolfe'        },
+  { id: 'UC29ju8bIPH5as8OGnQzwJyA', name: 'Traversy Media'    },
+  { id: 'UCbRP3c757lWg9M-U7TyEkXA', name: 'Theo – t3.gg'     },
+  { id: 'UCSHZKyawb77ixDdsGog4iWA', name: 'Lex Fridman'       },
+];
 const articleCache = {
   value: null,
   expiresAt: 0,
@@ -103,6 +119,7 @@ async function buildArticlesResponse() {
     fetchRssFeed('https://machinelearning.apple.com/rss.xml',                         'Apple ML',          '#555555'),
     fetchRssFeed('https://www.microsoft.com/en-us/ai/blog/feed/',                     'Microsoft AI',      '#0078d4'),
     fetchRssFeed('https://qwenlm.github.io/blog/index.xml',                           'QwenLM',            '#7c3aed'),
+    ...YOUTUBE_CHANNELS.map(ch => fetchYouTubeChannel(ch.id, ch.name)),
   ]);
 
   const all = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
@@ -245,6 +262,40 @@ async function fetchLobsters() {
       if (items.length === LIMIT) break;
     }
     if (items.length === LIMIT) break;
+  }
+
+  return items;
+}
+
+async function fetchYouTubeChannel(channelId, channelName) {
+  const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+  const feed = await rssParser.parseURL(url);
+  const cutoff = Date.now() - THIRTY_DAYS_MS;
+  const items = [];
+
+  for (const item of feed.items ?? []) {
+    if (!item.title || !item.link) continue;
+    const date = item.pubDate ? new Date(item.pubDate).toISOString() : null;
+    if (!date || new Date(date).getTime() < cutoff) continue;
+
+    const mg = item.mediaGroup ?? {};
+    const thumbEntry = mg['media:thumbnail']?.[0];
+    const thumbnail = (thumbEntry?.$?.url || thumbEntry?.url) ?? null;
+    const rawDesc = (mg['media:description']?.[0] || item.contentSnippet || '')
+      .replace(/\n/g, ' ').trim();
+
+    items.push({
+      id: `yt-${channelId}-${item.id || item.link}`,
+      title: item.title.replace(/\n/g, ' ').trim(),
+      url: item.link,
+      description: rawDesc.length > 220 ? rawDesc.slice(0, 220).trimEnd() + '…' : rawDesc,
+      thumbnail,
+      date,
+      source: channelName,
+      sourceColor: '#ff0000',
+      mediaType: 'video',
+    });
+    if (items.length === YOUTUBE_LIMIT) break;
   }
 
   return items;

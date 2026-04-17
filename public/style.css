@@ -299,6 +299,14 @@ body {
   color: #a78bfa;
 }
 
+.card-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+
 .card-desc {
   font-size: 13px;
   color: var(--text-2);

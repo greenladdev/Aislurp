@@ -27,6 +27,14 @@ const SOURCE_STYLES = {
   'r/singularity':     { bg: 'rgba(99,102,241,0.12)', color: '#818cf8', border: 'rgba(99,102,241,0.3)' },
   'r/ChatGPT':         { bg: 'rgba(16,163,127,0.12)', color: '#34d399', border: 'rgba(16,163,127,0.3)' },
   'r/vibecoding':      { bg: 'rgba(124,58,237,0.12)', color: '#a78bfa', border: 'rgba(124,58,237,0.3)' },
+  'Two Minute Papers': { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
+  'Fireship':          { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
+  'Yannic Kilcher':    { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
+  'ThePrimeagen':      { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
+  'Matt Wolfe':        { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
+  'Traversy Media':    { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
+  'Theo – t3.gg':      { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
+  'Lex Fridman':       { bg: 'rgba(255,0,0,0.12)',   color: '#f87171', border: 'rgba(255,0,0,0.35)'   },
 };
 
 function badgeStyle(source) {
@@ -82,7 +90,8 @@ function renderCard(article) {
   const footer = document.createElement('div');
   footer.className = 'card-footer';
 
-  const readLink = createArticleLink(safeUrl, 'read-link', 'Read article');
+  const ctaLabel = article.mediaType === 'video' ? 'Watch video' : 'Read article';
+  const readLink = createArticleLink(safeUrl, 'read-link', ctaLabel);
   const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   icon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   icon.setAttribute('viewBox', '0 0 20 20');
@@ -98,6 +107,20 @@ function renderCard(article) {
   footer.appendChild(readLink);
 
   card.append(meta, title);
+
+  if (article.thumbnail) {
+    try {
+      const thumbUrl = new URL(article.thumbnail);
+      if (thumbUrl.protocol === 'https:' && ['i.ytimg.com', 'img.youtube.com'].includes(thumbUrl.hostname)) {
+        const img = document.createElement('img');
+        img.className = 'card-thumb';
+        img.src = thumbUrl.href;
+        img.alt = '';
+        img.loading = 'lazy';
+        card.appendChild(img);
+      }
+    } catch { /* invalid URL, skip */ }
+  }
 
   if (article.description) {
     const desc = document.createElement('p');
